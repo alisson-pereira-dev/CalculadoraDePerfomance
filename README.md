@@ -12,6 +12,20 @@ npm run build    # typecheck + build estático (dist/)
 npm test         # testes das fórmulas
 ```
 
+## Deploy (VPS com Docker)
+
+O `Dockerfile` faz o build em Node 22 e serve o site estático com nginx (porta **80**, ~75 MB).
+No painel da VPS: fonte **Github** → repositório `CalculadoraDePerfomance`, ramo `main`, caminho de build `/`,
+construção **Dockerfile**, porta do domínio **80**. Teste local:
+
+```bash
+docker build -t mindsight-calc .
+docker run --rm -p 8080:80 mindsight-calc   # http://localhost:8080
+```
+
+`nginx.conf`: gzip, cache imutável em `/assets/`, `index.html` sem cache, fallback de SPA e `/healthz`
+(usado pelo `HEALTHCHECK`).
+
 ## Estrutura
 
 | Pasta | Conteúdo |
