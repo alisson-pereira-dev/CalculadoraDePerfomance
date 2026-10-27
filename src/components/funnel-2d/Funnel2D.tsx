@@ -14,7 +14,8 @@ interface Props {
 
 /** Largura relativa de uma etapa — mesma escala √contagem da versão 3D. */
 const width = (count: number, leads: number) =>
-  Math.max(10, 100 * Math.sqrt(Math.max(0, count) / leads))
+  // leads trunca para 0 quando o investimento é menor que o CPL; sem o guard viraria 0/0 (NaN).
+  Math.max(10, 100 * Math.sqrt(Math.max(0, count) / Math.max(1, leads)))
 
 /**
  * Fallback 2D (sem WebGL ou prefers-reduced-motion): blocos planos decrescentes.

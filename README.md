@@ -39,8 +39,13 @@ docker run --rm -p 8080:80 mindsight-calc   # http://localhost:8080
 
 ## Decisões de implementação
 
-- **Taxas** são percentuais 0–100; contagens do funil ficam fracionárias no cálculo (ex.: 7,2 vendas)
-  e só são arredondadas na exibição, para Faturamento/CAC/ROAS seguirem exatamente as fórmulas do PRD.
+- **Taxas** são percentuais 0–100. **Contagens do funil são sempre inteiras**: cada etapa trunca
+  (não arredonda) o resultado da etapa anterior × taxa antes de alimentar a próxima — nunca existe
+  "4,1 comparecimentos" ou "0,4 vendas", mesmo com taxas fracionárias. **Sem pelo menos 1 venda
+  completa, o Faturamento (e a receita de consultas) é R$ 0**, em vez de um valor fracionário; com
+  1+ venda, o Faturamento já sai proporcional a elas (vendas inteiro × ticket). `breakEvenCpl` é a
+  exceção: é uma aproximação algébrica contínua, usada só como referência teórica no gráfico de
+  ROAS — em baixo volume o ROAS real nesse CPL fica um pouco abaixo de 1x por causa do truncamento.
 - **Entrada inválida** (CPL = 0, campo vazio etc.): o store mantém o último resultado válido, então
   KPIs e funil congelam e o input mostra erro inline.
 - **Raio do segmento** ∝ √contagem, com raio mínimo para a etapa Vendas continuar visível.

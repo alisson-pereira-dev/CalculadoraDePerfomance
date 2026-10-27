@@ -46,10 +46,11 @@ export interface FunnelResult {
   /** Contagem por etapa: Leads, MQLs, Agendamentos, Comparecimentos, Vendas. */
   counts: Counts
   leads: number
+  /** Sempre inteiro (ver computeFunnel): não existe "venda parcial". */
   vendas: number
-  /** Vendas × ticket + comparecimentos × preço da consulta. */
+  /** Vendas × ticket + comparecimentos × preço da consulta. Zero sem ao menos 1 venda. */
   faturamento: number
-  /** Parte do faturamento vinda das consultas (comparecimentos × preço). */
+  /** Parte do faturamento vinda das consultas (comparecimentos × preço). Zero sem ao menos 1 venda. */
   receitaConsultas: number
   /** `null` quando não há vendas (divisão por zero). */
   cac: number | null
@@ -73,13 +74,22 @@ export function validateInputs(inputs: Inputs): InputErrors {
 }
 
 export function computeFunnel(inputs: Inputs, rates: Rates): FunnelResult {
-  const leads = inputs.investimento / inputs.cpl
-  const mqls = leads * (rates.leadMql / 100)
-  const agendamentos = mqls * (rates.mqlAgendamento / 100)
-  const comparecimentos = agendamentos * (rates.agendamentoComparecimento / 100)
-  const vendas = comparecimentos * (rates.comparecimentoVenda / 100)
-  const receitaConsultas = comparecimentos * inputs.precoConsulta
-  const faturamento = vendas * inputs.ticketMedio + receitaConsultas
+  // Cada etapa é um evento discreto — um lead, uma venda — então nunca existe fração
+  // ("4,1 comparecimentos" não existe). Por isso cada contagem trunca o resultado da
+  // etapa anterior × taxa antes de alimentar a próxima, sempre, não importa a taxa
+  // ajustada: uma conversão só conta quando está completa, nunca "quase lá".
+  const leads = Math.floor(inputs.investimento / inputs.cpl)
+  const mqls = Math.floor(leads * (rates.leadMql / 100))
+  const agendamentos = Math.floor(mqls * (rates.mqlAgendamento / 100))
+  const comparecimentos = Math.floor(agendamentos * (rates.agendamentoComparecimento / 100))
+  const vendas = Math.floor(comparecimentos * (rates.comparecimentoVenda / 100))
+
+  // Sem pelo menos 1 venda completa não há faturamento a projetar — nem a receita das
+  // consultas, para os dois números continuarem batendo. Com vendas inteiro, o valor já
+  // sai proporcional a cada venda fechada.
+  const temVenda = vendas >= 1
+  const receitaConsultas = temVenda ? comparecimentos * inputs.precoConsulta : 0
+  const faturamento = temVenda ? vendas * inputs.ticketMedio + receitaConsultas : 0
 
   return {
     inputs,
@@ -125,7 +135,11 @@ export function rateImpacts(inputs: Inputs, rates: Rates): Opportunity[] {
   }).sort((a, b) => b.gainFaturamento - a.gainFaturamento)
 }
 
-/** A maior alavanca, ou `null` se nenhuma taxa pode subir. */
+/**
+ * A maior alavanca entre as quatro taxas, ou `null` quando nenhuma produz ganho — seja
+ * porque já estão no teto, seja porque o ganho fracionário não chega a fechar mais uma
+ * venda inteira (ver computeFunnel).
+ */
 export function findBestOpportunity(inputs: Inputs, rates: Rates): Opportunity | null {
   return rateImpacts(inputs, rates).find((o) => o.gainFaturamento > 0) ?? null
 }
@@ -134,6 +148,10 @@ export function findBestOpportunity(inputs: Inputs, rates: Rates): Opportunity |
  * CPL de equilíbrio: o CPL máximo em que o ROAS ainda é 1x.
  * ROAS = (conversão total × ticket + conversão até a consulta × preço da consulta) ÷ CPL,
  * logo ROAS = 1 quando CPL = esse numerador.
+ *
+ * É uma aproximação contínua (não passa pelo truncamento de computeFunnel) — serve só
+ * como referência teórica para a linha tracejada do gráfico de ROAS. Em baixo volume o
+ * ROAS real no CPL de equilíbrio fica um pouco abaixo de 1x por causa do truncamento.
  */
 export function breakEvenCpl(inputs: Inputs, rates: Rates): number {
   const upToConsulta =

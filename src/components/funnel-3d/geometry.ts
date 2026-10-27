@@ -20,8 +20,10 @@ const clamp01 = (t: number) => Math.min(1, Math.max(0, t))
  * Raio ∝ √contagem para não exagerar a diferença visual entre Leads e Vendas.
  */
 export function boundaryRadii(counts: Counts, referenceLeads: number): number[] {
-  const rad = (c: number) =>
-    Math.max(MIN_RADIUS, MAX_RADIUS * Math.sqrt(Math.max(0, c) / referenceLeads))
+  // Leads agora é sempre inteiro (ver computeFunnel) e pode truncar para 0 quando o
+  // investimento é menor que o CPL — sem o guard abaixo isso viraria 0/0 (NaN).
+  const safeLeads = Math.max(1, referenceLeads)
+  const rad = (c: number) => Math.max(MIN_RADIUS, MAX_RADIUS * Math.sqrt(Math.max(0, c) / safeLeads))
   const r = counts.map(rad)
   r.push(Math.max(MIN_RADIUS * 0.8, r[SEGMENTS - 1] * 0.75))
   return r

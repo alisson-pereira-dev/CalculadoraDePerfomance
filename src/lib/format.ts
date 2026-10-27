@@ -15,5 +15,5 @@ export const formatBRLCompact = (v: number) => brl0.format(v)
 export const formatRoas = (v: number) => `${two.format(v)}x`
 export const formatPercent = (v: number) => `${one.format(v)}%`
 
-/** Contagens: inteiro a partir de 10; uma casa decimal abaixo disso (ex.: 7,2 vendas). */
-export const formatCount = (v: number) => (v >= 10 ? int.format(v) : one.format(v))
+/** Contagens do funil — sempre inteiras (ver computeFunnel); arredonda por segurança. */
+export const formatCount = (v: number) => int.format(Math.round(v))

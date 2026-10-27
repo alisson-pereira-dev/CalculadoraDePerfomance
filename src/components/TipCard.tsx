@@ -24,8 +24,8 @@ export function TipCard() {
           </p>
         ) : (
           <p className="text-[13px] leading-relaxed text-text-2">
-            Suas taxas já estão no teto. O próximo ganho vem de reduzir o CPL ou aumentar o ticket
-            médio.
+            Nenhum ajuste isolado de taxa aumenta o faturamento agora. Para crescer, reduza o CPL
+            ou aumente o investimento ou o ticket médio.
           </p>
         )}
       </div>
